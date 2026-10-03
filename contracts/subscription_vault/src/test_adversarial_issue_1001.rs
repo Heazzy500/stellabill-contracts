@@ -32,7 +32,7 @@ fn pending(
     })
 }
 
-fn treasury(env: &Env, client: &SubscriptionVaultClient) -> Option<Address> {
+fn current_treasury(env: &Env, client: &SubscriptionVaultClient) -> Option<Address> {
     env.as_contract(&client.address, || crate::admin::get_treasury(env))
 }
 
@@ -46,7 +46,7 @@ fn queue_treasury_change_accepts_zero_and_maximum_fee() {
         Ok(Ok(()))
     );
     assert_eq!(client.get_protocol_fee_bps(), 0);
-    assert_eq!(treasury(&env, &client), Some(treasury));
+    assert_eq!(current_treasury(&env, &client), Some(treasury));
 
     let (env, client, admin) = setup();
     let treasury = Address::generate(&env);
@@ -61,14 +61,14 @@ fn queue_treasury_change_accepts_zero_and_maximum_fee() {
 fn queue_treasury_change_rejects_invalid_fee_without_mutating_state() {
     let (env, client, admin) = setup();
     let treasury = Address::generate(&env);
-    let before_treasury = treasury(&env, &client);
+    let before_treasury = current_treasury(&env, &client);
     let before_fee = client.get_protocol_fee_bps();
 
     assert_eq!(
         client.try_queue_treasury_change(&admin, &treasury, &10_001),
         Err(Ok(Error::InvalidInput))
     );
-    assert_eq!(treasury(&env, &client), before_treasury);
+    assert_eq!(current_treasury(&env, &client), before_treasury);
     assert_eq!(client.get_protocol_fee_bps(), before_fee);
     assert!(pending(&env, &client).is_none());
 }
@@ -109,6 +109,6 @@ fn queue_treasury_change_rejects_second_pending_change_without_overwriting_first
     assert_eq!(after.new_treasury, before.new_treasury);
     assert_eq!(after.new_fee_bps, before.new_fee_bps);
     assert_eq!(after.effective_at, before.effective_at);
-    assert_eq!(treasury(&env, &client), Some(first_treasury));
+    assert_eq!(current_treasury(&env, &client), Some(first_treasury));
     assert_eq!(client.get_protocol_fee_bps(), 250);
 }
